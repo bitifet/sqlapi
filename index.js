@@ -9,9 +9,9 @@
 "use strict";
 
 var queryBuilder = (function(){
-    var filters = {
+    var filters = {//{{{
         notEmpty: function(v){return v;},
-    };
+    };//}}}
     function argParse(argSrc, argName, mandatory) {//{{{
         if (mandatory && argSrc === undefined) throw argName+" is mandatory"; // Detect omissions.
         if (! (argSrc instanceof Array)) argSrc = [argSrc]; // Accept single element as shortcut.
@@ -19,10 +19,20 @@ var queryBuilder = (function(){
         if (typeof mandatory == "number" && argSrc.length < mandatory) throw argName+" requires at least "+mandatory+" items.";
         return argSrc;
     };//}}}
-    function guess (preffix, str) {
+    function guess (preffix, str) {//{{{
         return str.length ? preffix + str : "";
-    };
+    };//}}}
     return function queryBuilder(qry, prm) {//{{{
+        if (typeof qry == "string") { // Manual operation for too simple querys:
+            // NOTE: In this mode, prm is expected to be single parameter, propperly ordered array or undefined.
+            prm = prm === undefined
+                ? []
+                : prm instanceof Array
+                    ? prm
+                    : [prm]
+            ;
+            return [qry, prm];
+        };
         var select = argParse(qry.select, "select", true);
         var from = argParse(qry.from, "from", true);
         var where = argParse(qry.where, "where", false);

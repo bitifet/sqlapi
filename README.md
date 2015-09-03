@@ -96,6 +96,19 @@ But simplicity is also allowed...
 ```
 
 
+And even more simplicity for trivial querys...
+(But here arguments, if specified, are mandatory. No smart guessing is done).
+
+```javascript
+    var query = require("sqlapi");
+
+    var q1 = query.build("select * from foo");
+    var q2 = query.build("select * from foo where bar = $1", ["barValue"]);
+    var q3 = query.build("select * from foo where bar = $1 and baz = $2", ["barValue", "bazValue"]);
+
+    console.log(q1, q2, q3);
+```
+
 
 
 <a name="contributing"></a>Contributing

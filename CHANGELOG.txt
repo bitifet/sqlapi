@@ -1,6 +1,9 @@
 CHANGELOG.txt
 =============
 
+"version": "0.0.3"
+    Even more simple syntax for really trivial querys.
+
 "version": "0.0.2"
     Minor README fixings and added brief explanation.
     Implemented ability to guess constants.
