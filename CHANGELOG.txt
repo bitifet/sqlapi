@@ -1,6 +1,9 @@
 CHANGELOG.txt
 =============
 
+"version": "0.0.4"
+    Fixed error when orderBy specified but empty.
+
 "version": "0.0.3"
     Even more simple syntax for really trivial querys.
 

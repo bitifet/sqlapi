@@ -77,7 +77,7 @@ var queryBuilder = (function(){
             .filter(filters.notEmpty) // Remove undefined arguments.
             .join(" and ")
         );
-        if (orderBy) sql += " order by " + orderBy.join(",");
+        if (orderBy) sql += guess(" order by ", orderBy.join(","));
 
         return [sql, args];
         
@@ -87,4 +87,14 @@ var queryBuilder = (function(){
 module.exports = {
     build: queryBuilder,
 };
+
+// TESTING:
+// ========
+//
+// To test any example from README.md or your own ones, comment out below line
+// and paste its code next to it: 
+//
+// var query = module.exports;
+//
+// (your testing code here)
 
