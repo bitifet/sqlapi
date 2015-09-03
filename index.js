@@ -8,7 +8,7 @@
 //
 "use strict";
 
-var queryBuilder = (function(){//{{{
+var queryBuilder = (function(){
     var filters = {
         notEmpty: function(v){return v;},
     };
@@ -37,28 +37,42 @@ var queryBuilder = (function(){//{{{
         ;
         if (where) sql += guess(" where ", where
             .map(function(w){
-                var prmName = w.split(" ", 2)[1];
-                if (! prmName) {
-                    prmName = w.replace(/^(?:.*\.)?(.*)$/, "$1")
+                var parts = w.split(" ", 3);
+                if (parts.length >= 3) return w; // Guess constant (Ex.: "someNumber >= 15").
+                w = parts[0];
+                var argName = parts[1];
+
+                // Pick operator:
+                var op = w.match(/\W+$/);
+                if (op) {
+                    op=op[0]; // Pick.
+                    w=w.substring(0,w.length-op.length); // Remove.
+                } else {
+                    op="="; // Default to equality.
+                };
+
+                // Pick argument name:
+                if (! argName) {
+                    argName = w.replace(/^(?:.*\.)?(.*)$/, "$1")
                 } else {
                     w = w.replace(/ .*$/, ""); // Remove alias spec.
                 };
-                if (prm[prmName] !== undefined) {
-                    args[args.length]=prm[prmName];
-                    return w+"=$"+args.length;
+
+                // Render condition ONLY if argument is defined:
+                if (prm[argName] !== undefined) {
+                    args[args.length]=prm[argName];
+                    return w+op+"$"+args.length;
                 };
             })
-            .filter(filters.notEmpty)
+            .filter(filters.notEmpty) // Remove undefined arguments.
             .join(" and ")
         );
         if (orderBy) sql += " order by " + orderBy.join(",");
 
-
-
         return [sql, args];
         
     };//}}}
-})();//}}}
+})();
 
 module.exports = {
     build: queryBuilder,

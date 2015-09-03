@@ -1,0 +1,13 @@
+CHANGELOG.txt
+=============
+
+"version": "0.0.2"
+    Minor README fixings and added brief explanation.
+    Implemented ability to guess constants.
+    Implemented ability to specify relational operator.
+    Updated README.
+    Added this changelog.
+
+"version": "0.0.1"
+    Initial commit.
+
