@@ -1,0 +1,27 @@
+{
+  "name": "sqlapi",
+  "version": "0.0.1",
+  "description": "Simple API to build customised SQL according given input parameters.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bitifet/sqlapi.git"
+  },
+  "keywords": [
+    "sql",
+    "dynamic",
+    "query",
+    "parameters",
+    "adaptable",
+    "api"
+  ],
+  "author": "Joan Miquel Torres <accounts@bitifet.net>",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/bitifet/sqlapi/issues"
+  },
+  "homepage": "https://github.com/bitifet/sqlapi#readme"
+}
