@@ -32,9 +32,15 @@ Almost "complete" example:
             "left outer client on (invoice.client = client.id)",
         ],
         where: [ // Undefined arguments are silently ignored.
-            "invoice.num",              // Will look for 'num' argument.
-            "empl.name",                // Will look for 'name' argument.
-            "client.name clientName",   // Will look for 'clientName' argument.
+            "invoice.num",                        // Will look for 'num' argument.
+            "empl.name",                          // Will look for 'name' argument.
+            "client.name clientName",             // Will look for 'clientName' argument.
+            ["client.surname", "clientSurname"],  // Array can be used instead.
+            ["client.sex",
+                function(s){                      // If function is provided as last property,
+                    return s[0].toLowerCase();    // then it will be called to format
+                },                                // input when received .
+            ],
         ],
         orderBy: [
             "name",

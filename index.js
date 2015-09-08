@@ -11,6 +11,7 @@
 var queryBuilder = (function(){
     var filters = {//{{{
         notEmpty: function(v){return v;},
+        defined: function(v){return v !== undefined;},
     };//}}}
     function argParse(argSrc, argName, mandatory) {//{{{
         if (mandatory && argSrc === undefined) throw argName+" is mandatory"; // Detect omissions.
@@ -47,7 +48,16 @@ var queryBuilder = (function(){
         ;
         if (where) sql += guess(" where ", where
             .map(function(w){
-                var parts = w.split(" ", 3);
+                var parts = ((w instanceof Array)
+                    ? w
+                    : w.split(" ", 3)
+                ).filter(filters.defined);
+
+                var fmt = (typeof parts[parts.length - 1] == "function") // Formatting callback.
+                    ? parts.pop()
+                    : false
+                ;
+
                 if (parts.length >= 3) return w; // Guess constant (Ex.: "someNumber >= 15").
                 w = parts[0];
                 var argName = parts[1];
@@ -70,7 +80,10 @@ var queryBuilder = (function(){
 
                 // Render condition ONLY if argument is defined:
                 if (prm[argName] !== undefined) {
-                    args[args.length]=prm[argName];
+                    args[args.length]=fmt
+                        ? fmt(prm[argName]) // Apply formatting callback if specified.
+                        : prm[argName]
+                    ;
                     return w+op+"$"+args.length;
                 };
             })

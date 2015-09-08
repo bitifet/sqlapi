@@ -1,6 +1,10 @@
 CHANGELOG.txt
 =============
 
+"version": "0.0.5"
+    Accept "where" items as an Array.
+    Accept imput formatting callback as last element of "where" items.
+
 "version": "0.0.4"
     Fixed error when orderBy specified but empty.
 
