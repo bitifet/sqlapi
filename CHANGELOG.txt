@@ -1,6 +1,10 @@
 CHANGELOG.txt
 =============
 
+"version": "0.0.6"
+    Accept textual operators by prepending them whith "=".
+    Updated README.md examples.
+
 "version": "0.0.5"
     Accept "where" items as an Array.
     Accept imput formatting callback as last element of "where" items.

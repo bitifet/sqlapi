@@ -63,10 +63,11 @@ var queryBuilder = (function(){
                 var argName = parts[1];
 
                 // Pick operator:
-                var op = w.match(/\W+$/);
+                var op = w.match(/[^.\w].*$/);
                 if (op) {
                     op=op[0]; // Pick.
                     w=w.substring(0,w.length-op.length); // Remove.
+                    if (op.match(/=\w/)) op = " "+op.substring(1)+" "; // =like, =ilike...
                 } else {
                     op="="; // Default to equality.
                 };
@@ -110,4 +111,3 @@ module.exports = {
 // var query = module.exports;
 //
 // (your testing code here)
-

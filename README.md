@@ -53,6 +53,8 @@ Almost "complete" example:
         // num: 23,
         // name: "John",
         // clientName: "Joseph",
+        // clientSurname: "Thomson",
+        // sex: "Male",
     };
 
     var q = query.build(sql, args);
@@ -74,10 +76,11 @@ But simplicity is also allowed...
             "person left outer join pets using (person_id)", // Nor here...
         ],
         where: [ // Undefined arguments are silently ignored.
-            "person.age >= 18", // Constant is guessed because of multiple spacing (so don't use "age>=18" or so...
-            "name",
+            "person.age >= 18",    // Constant is guessed because of multiple spacing (so don't use "age>=18" or so...
+            "name=like",           // Like, ilike or any other textual operators are allowed by prepending '='.
             "surname",
-            "petname",
+            "petname=ilike pet",   // Will use "pet" parameter for case insensitive "like" matching with petname.
+            "pet.age petAge",
             "pet.age>= petMaxAge", // Notice lack of space between column name and operator.
         ],
         orderBy: [
