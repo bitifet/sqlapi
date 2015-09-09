@@ -4,6 +4,7 @@ sqlAPI - index.js
 
 
 <a name="Brief"></a>Brief
+-------------------------
 
 This is a simple tool to build simple parametyzed SQL querys without bothering about provided or not provided parameters.
 
@@ -13,6 +14,7 @@ Complex querys or any kind of type validation are not supported. Maybe in future
 
 
 <a name="Examples"></a>Examples
+-------------------------------
 
 Almost "complete" example:
 
@@ -117,6 +119,30 @@ And even more simplicity for trivial querys...
 
     console.log(q1, q2, q3);
 ```
+
+
+
+<a name="More"></a>More capabilities
+
+    var promiseQueryFn = ...  // function(sql, arguments) //-> Returning promise.
+        // Existing function or your own implementation.
+        // Just needs to accept sql and arguments as parameters and return a promise.
+
+    var promisory = query.factory (
+        promiseQueryFn
+        // , onFullfill     // Fullfill parser (Optional).
+        // , onReject       // Reject parser (Optional).
+    );
+
+    var p1 = promisory(sql1, args1);
+    var p2 = promisory(sql2, args2);
+    // ...
+
+    // p1, p2, etc... are promises which will resolve with the promiseQueryFn
+    // resolution optionally parsed though onFullfill parser. Reject messages,
+    // when happen, will also be parsed thought onReject parser if defined.
+
+
 
 
 
