@@ -3,6 +3,8 @@ CHANGELOG.txt
 
     Minor code rearrangement.
     Incorporated factory function.
+    Added parentheses to "where" regexp expression to allow function calls (left hand).
+    Generalyzed factory function to allow multiple querys at input.
 
 "version": "0.0.6"
     Accept textual operators by prepending them whith "=".

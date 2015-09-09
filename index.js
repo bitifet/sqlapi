@@ -14,6 +14,7 @@ var Filters = {//{{{
 };//}}}
 var Parsers = {//{{{
     none: function dumbParser(v){return v;},
+    pickFirst: function pickFirst(v){return v[0];},
     argParse: function argParse(argSrc, argName, mandatory) {//{{{
         if (mandatory && argSrc === undefined) throw argName+" is mandatory"; // Detect omissions.
         if (! (argSrc instanceof Array)) argSrc = [argSrc]; // Accept single element as shortcut.
@@ -68,7 +69,7 @@ function sqlBuilder(qry, prm) {//{{{
             var argName = parts[1];
 
             // Pick operator:
-            var op = w.match(/[^.\w].*$/);
+            var op = w.match(/[^.\w()].*$/);
             if (op) {
                 op=op[0]; // Pick.
                 w=w.substring(0,w.length-op.length); // Remove.
@@ -103,28 +104,55 @@ function sqlBuilder(qry, prm) {//{{{
 };//}}}
 
 function queryFactory (//{{{
-    promiseQueryFn, // function(sql, arguments) //-> Returning promise.
-    onFullfill,     // Fullfill parser (Optional).
-    onReject        // Reject parser (Optional).
+    promiseQueryFn  // function(sql, arguments) //-> Returning promise.
+    , onFullfill    // Fullfill parser (Optional).
+    , onReject      // Reject parser (Optional).
 ) {
 
     onFullfill || (onFullfill = Parsers.none);
     onReject || (onReject = Parsers.none);
 
-    return function promisory(querySpec){
+    return function promisory(
+        querySpec
+        , onFinalFullfill
+        , onFinalReject
+    ) {
+
+        // Accept single of multiple querys:
+        if (! (querySpec instanceof Array)) querySpec = [querySpec];
+        onFinalFullfill || (onFinalFullfill = (querySpec.length > 1)
+            ? Parsers.none
+            : Parsers.pickFirst // Avoid forcing to manually pick when single query is provided.
+        );
+        onFinalReject || (onFinalReject = Parsers.none);
+
         return function(flt){
-            if (typeof querySpec == "string") flt = undefined; // Simple syntax only useful with no parameters.
+
+            // Accept single (common) or multiple (per query) parameter sets:
+            if (! (flt instanceof Array)) flt = Array.apply(null, {length: querySpec.length}).map(function(){return flt;});
+            flt = flt.map(function(flt, i){ // Should be sepparated process because flt could already be an Array.
+                if (typeof querySpec[i] == "string") return undefined; // Simple syntax only useful with no parameters.
+                return flt;
+            });
+
             return new Promise(function(resolve, reject){
-                var input = sqlBuilder(querySpec, flt);
-                promiseQueryFn(
-                    input[0]    // SQL
-                    , input[1]  // Arguments
-                ).then(function(data){
-                    resolve(onFullfill(data));
+                Promise.all(querySpec.map(function(qspc, i){
+                    return promiseQueryFn.apply(this,sqlBuilder(qspc, flt[i]));
+                })).then(function(data){
+                    resolve(
+                        onFinalFullfill(
+                            data.map(onFullfill)
+                        )
+                    );
                 }).catch(function(err){
-                    reject(onReject(err));
+                    reject(
+                        onFinalReject(
+                            onReject(err)
+                        )
+                    );
                 });
             });
+
         };
     };
 
