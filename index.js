@@ -39,7 +39,10 @@ function sqlBuilder(qry, prm) {//{{{
                 : [prm]
         ;
         return [qry, prm];
+    } else if (prm === undefined) {
+        prm = {};
     };
+
     var select = Parsers.argParse(qry.select, "select", true);
     var from = Parsers.argParse(qry.from, "from", true);
     var where = Parsers.argParse(qry.where, "where", false);
@@ -140,6 +143,9 @@ function queryFactory (//{{{
 
         return function(flt){
 
+            var me = this;
+            var args = arguments;
+
             // Accept single (common) or multiple (per query) parameter sets:
             if (! (flt instanceof Array)) flt = Array.apply(null, {length: querySpec.length}).map(function(){return flt;});
             flt = flt.map(function(flt, i){ // Should be sepparated process because flt could already be an Array.
@@ -149,6 +155,7 @@ function queryFactory (//{{{
 
             return new Promise(function(resolve, reject){
                 Promise.all(querySpec.map(function(qspc, i){
+                    if (typeof qspc == "function") return qspc.apply(me, args); // Allow to provide alternative implementation.
                     return promiseQueryFn.apply(this,sqlBuilder(qspc, flt[i]));
                 })).then(function(data){
                     resolve(
