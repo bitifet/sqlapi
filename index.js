@@ -104,27 +104,39 @@ function sqlBuilder(qry, prm) {//{{{
 };//}}}
 
 function queryFactory (//{{{
-    promiseQueryFn  // function(sql, arguments) //-> Returning promise.
-    , onFullfill    // Fullfill parser (Optional).
-    , onReject      // Reject parser (Optional).
+    promiseQueryFn      // function(sql, arguments) //-> Returning promise.
+    , def_onFinalFullfill   // Default final Fullfill parser (Optional).
+    , def_onFinalReject     // Default final Reject parser (Optional).
+    , def_onStepFullfill    // Default per-step Fullfill parser (Optional).
+    , def_onStepReject      // Default per-step Reject parser (Optional).
 ) {
 
-    onFullfill || (onFullfill = Parsers.none);
-    onReject || (onReject = Parsers.none);
 
     return function promisory(
         querySpec
         , onFinalFullfill
         , onFinalReject
+        , onStepFullfill
+        , onStepReject
     ) {
+
+        // Apply default parsers when not explicitly provided:
+        onFinalFullfill || (onFinalFullfill = def_onFinalFullfill);
+        onFinalReject || (onFinalReject = def_onFinalReject);
+        onStepFullfill || (onStepFullfill = def_onStepFullfill);
+        onStepReject || (onStepReject = def_onStepReject);
 
         // Accept single of multiple querys:
         if (! (querySpec instanceof Array)) querySpec = [querySpec];
+
+        // Apply default implementations to unspecified parsers:
         onFinalFullfill || (onFinalFullfill = (querySpec.length > 1)
             ? Parsers.none
             : Parsers.pickFirst // Avoid forcing to manually pick when single query is provided.
         );
         onFinalReject || (onFinalReject = Parsers.none);
+        onStepFullfill || (onStepFullfill = Parsers.none);
+        onStepReject || (onStepReject = Parsers.none);
 
         return function(flt){
 
@@ -141,13 +153,13 @@ function queryFactory (//{{{
                 })).then(function(data){
                     resolve(
                         onFinalFullfill(
-                            data.map(onFullfill)
+                            data.map(onStepFullfill)
                         )
                     );
                 }).catch(function(err){
                     reject(
                         onFinalReject(
-                            onReject(err)
+                            onStepReject(err)
                         )
                     );
                 });

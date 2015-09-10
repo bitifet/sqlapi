@@ -5,6 +5,7 @@ CHANGELOG.txt
     Incorporated factory function.
     Added parentheses to "where" regexp expression to allow function calls (left hand).
     Generalyzed factory function to allow multiple querys at input.
+    Generalyzed parsers specification to factory and generated promisorys.
 
 "version": "0.0.6"
     Accept textual operators by prepending them whith "=".
