@@ -15,13 +15,6 @@ var Filters = {//{{{
 var Parsers = {//{{{
     none: function dumbParser(v){return v;},
     pickFirst: function pickFirst(v){return v[0];},
-    argParse: function argParse(argSrc, argName, mandatory) {//{{{
-        if (mandatory && argSrc === undefined) throw argName+" is mandatory"; // Detect omissions.
-        if (! (argSrc instanceof Array)) argSrc = [argSrc]; // Accept single element as shortcut.
-        argSrc = argSrc.filter(Filters.notEmpty); // Drop empty items.
-        if (typeof mandatory == "number" && argSrc.length < mandatory) throw argName+" requires at least "+mandatory+" items.";
-        return argSrc;
-    },//}}}
 };//}}}
 function guess (preffix, str) {//{{{
     return str.length ? preffix + str : "";
@@ -29,105 +22,152 @@ function guess (preffix, str) {//{{{
 
 // -----------------------------
 
-function sqlBuilder(qry, prm) {//{{{
-    if (typeof qry == "string") { // Manual operation for too simple querys:
-        // NOTE: In this mode, prm is expected to be single parameter, propperly ordered array or undefined.
-        prm = prm === undefined
-            ? []
-            : prm instanceof Array
-                ? prm
-                : [prm]
-        ;
-        return [qry, prm];
-    } else if (prm === undefined) {
-        prm = {};
-    };
-    function pushCondition(w, op, argName, prm, fmt){
-        function pushArgs(argName){//{{{
-            argName = argName.substring(1); // Remove '$' sign.
-            if (prm[argName] === undefined) {
-                missing = true;
-                return "";
-            };
-            newArgs[newArgs.length] = fmt
-                ? fmt(prm[argName], argName) // Apply formatting callback if specified.
-                : prm[argName]
-            ;
-            return "$"+(i++);
+
+var sqlBuilder = (function(){
+
+    function buildQuery(qry, prm, args) {//{{{
+
+        function pushCondition(w, op, argName, prm, fmt){//{{{
+            function pushArgs(argName){//{{{
+                argName = argName.substring(1); // Remove '$' sign.
+                if (prm[argName] === undefined) {
+                    missing = true;
+                    return "";
+                };
+                newArgs[newArgs.length] = fmt
+                    ? fmt(prm[argName], argName) // Apply formatting callback if specified.
+                    : prm[argName]
+                ;
+                return "$"+(i++);
+            };//}}}
+            var i = args.length + 1;
+            var missing = false;
+            var newArgs = [];
+
+            var argExpr = argName.replace(
+                /\$\w+\b/g
+                , pushArgs
+            );
+
+            if (missing) return;
+            args = args.concat(newArgs);
+            return w+op+argExpr;
+
         };//}}}
-        var i = args.length + 1;
-        var missing = false;
-        var newArgs = [];
 
-        var argExpr = argName.replace(
-            /\$\w+\b/g
-            , pushArgs
+        ///function subQuery(subQry) {//{{{
+        ///    var as = subQry.as
+        ///        ? " as " + subQry.as
+        ///        : ""
+        ///    ;
+        ///    return buildQuery(subQry, prm, args)[0]+as;
+        ///};//}}}
+
+        function argParse(argSrc, argName, mandatory) {//{{{
+            if (mandatory && argSrc === undefined) throw argName+" is mandatory"; // Detect omissions.
+            if (! (argSrc instanceof Array)) argSrc = [argSrc]; // Accept single element as shortcut.
+            argSrc = argSrc.filter(Filters.notEmpty); // Drop empty items.
+            if (typeof mandatory == "number" && argSrc.length < mandatory) throw argName+" requires at least "+mandatory+" items.";
+            return argSrc;
+        };//}}}
+
+        ///function pickOperator(w) {//{{{
+        ///    WARNING: Doesen't work because needs to modify "w".
+        ///       Left here only as a draft for a future implementation of subquerys.
+        ///    var op = w.match(/[^.\w()].*$/);
+        ///    if (op) {
+        ///        op=op[0]; // Pick.
+        ///        w=w.substring(0,w.length-op.length); // Remove.
+        ///        if (op.match(/=\w/)) op = " "+op.substring(1)+" "; // =like, =ilike...
+        ///    } else {
+        ///        op="="; // Default to equality.
+        ///    };
+        ///    return op;
+        ///};//}}}
+
+        if (typeof qry == "string") { // Manual operation for too simple querys:
+            // NOTE: In this mode, prm is expected to be single parameter, propperly ordered array or undefined.
+            prm = prm === undefined
+                ? []
+                : prm instanceof Array
+                    ? prm
+                    : [prm]
+            ;
+            return [qry, prm];
+        } else if (prm === undefined) {
+            prm = {};
+        };
+
+        var select = argParse(qry.select, "select", true);
+        var from = argParse(qry.from, "from", true);
+        var where = argParse(qry.where, "where", false);
+        var orderBy = argParse(qry.orderBy, "orderBy", false);
+
+        var sql = "select " + select.join(",")
+            + " from " + from
+                .join(" join ")
+                .replace(/ join (left |right )?outer /, " $1 outer join ") // Allow "outer tableName".
+        ;
+        if (where) sql += guess(" where ", where
+            .map(function(w){
+                var parts = ((w instanceof Array)
+                    ? w
+                    : w.split(" ", 3)
+                ).filter(Filters.defined);
+
+                var fmt = (typeof parts[parts.length - 1] == "function") // Formatting callback.
+                    ? parts.pop()
+                    : false
+                ;
+
+                if (parts.length >= 3) return w; // Guess constant (Ex.: "someNumber >= 15").
+                w = parts[0];
+
+                ///if (typeof w == "object") {
+                ///    parts.shift(); // In this case, operator is expected come be isolated.
+                ///    w = subQuery(w);
+                ///    var op = pickOperator(w); // Pick operator.
+                ///} else {
+                ///    var op = pickOperator(parts[0]); // Pick operator.
+                ///};
+
+                var op = w.match(/[^.\w()].*$/);
+                if (op) {
+                    op=op[0]; // Pick.
+                    w=w.substring(0,w.length-op.length); // Remove.
+                    if (op.match(/=\w/)) op = " "+op.substring(1)+" "; // =like, =ilike...
+                } else {
+                    op="="; // Default to equality.
+                };
+
+
+                // Pick argument name:
+                var argName = parts[1];
+                if (! argName) {
+                    argName = w.replace(/^(?:.*\.)?(.*)$/, "$1")
+                } else {
+                    w = w.replace(/ .*$/, ""); // Remove alias spec.
+                };
+
+                if (! argName.match(/\$/)) argName = "$"+argName; // Backward compatibility.
+
+                return pushCondition(w, op, argName, prm, fmt);
+
+            })
+            .filter(Filters.notEmpty) // Remove undefined arguments.
+            .join(" and ")
         );
+        if (orderBy) sql += guess(" order by ", orderBy.join(","));
 
-        if (missing) return;
-        args = args.concat(newArgs);
-        return w+op+argExpr;
+        return [sql, args];
+        
+    };//}}}
 
+    return function builder (qry, prm) {
+        return buildQuery(qry, prm, []);
     };
 
-    var select = Parsers.argParse(qry.select, "select", true);
-    var from = Parsers.argParse(qry.from, "from", true);
-    var where = Parsers.argParse(qry.where, "where", false);
-    var orderBy = Parsers.argParse(qry.orderBy, "orderBy", false);
-
-    var args = [];
-
-    var sql = "select " + select.join(",")
-        + " from " + from
-            .join(" join ")
-            .replace(/ join (left |right )?outer /, " $1 outer join ") // Allow "outer tableName".
-    ;
-    if (where) sql += guess(" where ", where
-        .map(function(w){
-            var parts = ((w instanceof Array)
-                ? w
-                : w.split(" ", 3)
-            ).filter(Filters.defined);
-
-            var fmt = (typeof parts[parts.length - 1] == "function") // Formatting callback.
-                ? parts.pop()
-                : false
-            ;
-
-            if (parts.length >= 3) return w; // Guess constant (Ex.: "someNumber >= 15").
-            w = parts[0];
-            var argName = parts[1];
-
-            // Pick operator:
-            var op = w.match(/[^.\w()].*$/);
-            if (op) {
-                op=op[0]; // Pick.
-                w=w.substring(0,w.length-op.length); // Remove.
-                if (op.match(/=\w/)) op = " "+op.substring(1)+" "; // =like, =ilike...
-            } else {
-                op="="; // Default to equality.
-            };
-
-            // Pick argument name:
-            if (! argName) {
-                argName = w.replace(/^(?:.*\.)?(.*)$/, "$1")
-            } else {
-                w = w.replace(/ .*$/, ""); // Remove alias spec.
-            };
-
-            if (! argName.match(/\$/)) argName = "$"+argName; // Backward compatibility.
-
-            return pushCondition(w, op, argName, prm, fmt);
-
-        })
-        .filter(Filters.notEmpty) // Remove undefined arguments.
-        .join(" and ")
-    );
-    if (orderBy) sql += guess(" order by ", orderBy.join(","));
-
-    return [sql, args];
-    
-};//}}}
+})();
 
 function queryFactory (//{{{
     promiseQueryFn      // function(sql, arguments) //-> Returning promise.
@@ -215,3 +255,4 @@ module.exports = {
 // var query = module.exports;
 //
 // (your testing code here)
+
