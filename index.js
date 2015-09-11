@@ -42,6 +42,33 @@ function sqlBuilder(qry, prm) {//{{{
     } else if (prm === undefined) {
         prm = {};
     };
+    function pushCondition(w, op, argName, prm, fmt){
+        function pushArgs(argName){//{{{
+            argName = argName.substring(1); // Remove '$' sign.
+            if (prm[argName] === undefined) {
+                missing = true;
+                return "";
+            };
+            newArgs[newArgs.length] = fmt
+                ? fmt(prm[argName], argName) // Apply formatting callback if specified.
+                : prm[argName]
+            ;
+            return "$"+(i++);
+        };//}}}
+        var i = args.length + 1;
+        var missing = false;
+        var newArgs = [];
+
+        var argExpr = argName.replace(
+            /\$\w+\b/g
+            , pushArgs
+        );
+
+        if (missing) return;
+        args = args.concat(newArgs);
+        return w+op+argExpr;
+
+    };
 
     var select = Parsers.argParse(qry.select, "select", true);
     var from = Parsers.argParse(qry.from, "from", true);
@@ -88,14 +115,10 @@ function sqlBuilder(qry, prm) {//{{{
                 w = w.replace(/ .*$/, ""); // Remove alias spec.
             };
 
-            // Render condition ONLY if argument is defined:
-            if (prm[argName] !== undefined) {
-                args[args.length]=fmt
-                    ? fmt(prm[argName]) // Apply formatting callback if specified.
-                    : prm[argName]
-                ;
-                return w+op+"$"+args.length;
-            };
+            if (! argName.match(/\$/)) argName = "$"+argName; // Backward compatibility.
+
+            return pushCondition(w, op, argName, prm, fmt);
+
         })
         .filter(Filters.notEmpty) // Remove undefined arguments.
         .join(" and ")
@@ -113,7 +136,6 @@ function queryFactory (//{{{
     , def_onStepFullfill    // Default per-step Fullfill parser (Optional).
     , def_onStepReject      // Default per-step Reject parser (Optional).
 ) {
-
 
     return function promisory(
         querySpec
