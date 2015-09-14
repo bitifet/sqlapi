@@ -27,7 +27,7 @@ var sqlBuilder = (function(){
 
     function buildQuery(qry, prm, args) {//{{{
 
-        function pushCondition(w, op, argName, prm, fmt){//{{{
+        function pushCondition(w, prm, fmt){//{{{
             function pushArgs(argName){//{{{
                 argName = argName.substring(1); // Remove '$' sign.
                 if (prm[argName] === undefined) {
@@ -40,28 +40,21 @@ var sqlBuilder = (function(){
                 ;
                 return "$"+(i++);
             };//}}}
+
             var i = args.length + 1;
             var missing = false;
             var newArgs = [];
 
-            var argExpr = argName.replace(
+            w = w.replace(
                 /\$\w+\b/g
                 , pushArgs
             );
 
             if (missing) return;
             args = args.concat(newArgs);
-            return w+op+argExpr;
+            return w;
 
         };//}}}
-
-        ///function subQuery(subQry) {//{{{
-        ///    var as = subQry.as
-        ///        ? " as " + subQry.as
-        ///        : ""
-        ///    ;
-        ///    return buildQuery(subQry, prm, args)[0]+as;
-        ///};//}}}
 
         function argParse(argSrc, argName, mandatory) {//{{{
             if (mandatory && argSrc === undefined) throw argName+" is mandatory"; // Detect omissions.
@@ -71,18 +64,14 @@ var sqlBuilder = (function(){
             return argSrc;
         };//}}}
 
-        ///function pickOperator(w) {//{{{
-        ///    WARNING: Doesen't work because needs to modify "w".
-        ///       Left here only as a draft for a future implementation of subquerys.
-        ///    var op = w.match(/[^.\w()].*$/);
-        ///    if (op) {
-        ///        op=op[0]; // Pick.
-        ///        w=w.substring(0,w.length-op.length); // Remove.
-        ///        if (op.match(/=\w/)) op = " "+op.substring(1)+" "; // =like, =ilike...
-        ///    } else {
-        ///        op="="; // Default to equality.
-        ///    };
-        ///    return op;
+
+
+        ///function subQuery(subQry) {//{{{
+        ///    var as = subQry.as
+        ///        ? " as " + subQry.as
+        ///        : ""
+        ///    ;
+        ///    return buildQuery(subQry, prm, args)[0]+as;
         ///};//}}}
 
         if (typeof qry == "string") { // Manual operation for too simple querys:
@@ -106,52 +95,69 @@ var sqlBuilder = (function(){
         var sql = "select " + select.join(",")
             + " from " + from
                 .join(" join ")
-                .replace(/ join (left |right )?outer /, " $1 outer join ") // Allow "outer tableName".
+                .replace(/ join (left |right )?outer /, " $1outer join ") // Allow "outer tableName".
         ;
+
+
+        function simpleWhere(w){//{{{
+
+            var parts = w.split(" ", 3).filter(Filters.defined);
+            if (parts.length >= 3) return w; // Guess constant (Ex.: "someNumber >= 15").
+            w = parts[0];
+
+            var op = w.match(/[^.\w()].*$/);
+            if (op) {
+                op=op[0]; // Pick.
+                w=w.substring(0,w.length-op.length); // Remove.
+                if (op.match(/=\w/)) op = " "+op.substring(1)+" "; // =like, =ilike...
+            } else {
+                op="="; // Default to equality.
+            };
+
+            // Pick argument name:
+            var argName = parts[1];
+            if (! argName) {
+                argName = w.replace(/^(?:.*\.)?(.*)$/, "$1")
+            } else {
+                w = w.replace(/ .*$/, ""); // Remove alias spec.
+            };
+
+            if (! argName.match(/\$/)) argName = "$"+argName; // Backward compatibility.
+
+            return [w, op, argName].join(" ");
+
+        };//}}}
+
+
+
         if (where) sql += guess(" where ", where
             .map(function(w){
-                var parts = ((w instanceof Array)
-                    ? w
-                    : w.split(" ", 3)
-                ).filter(Filters.defined);
 
-                var fmt = (typeof parts[parts.length - 1] == "function") // Formatting callback.
-                    ? parts.pop()
-                    : false
+                var fmt = false;
+
+                if (typeof w === "string") w = [w];
+
+                return w
+                    .map(function(w){
+
+                        switch (typeof w) {
+                            case "function":
+                                fmt = w;
+                                return;
+                            case "string":
+                                return simpleWhere(w);
+                            default:
+                                throw "Wrong where clausule item: " + w;
+
+                        };
+
+                    })
+                    .filter(Filters.defined)
+                    .map(function(w){
+                        return pushCondition(w, prm, fmt);
+                    })
+                    .join (" ")
                 ;
-
-                if (parts.length >= 3) return w; // Guess constant (Ex.: "someNumber >= 15").
-                w = parts[0];
-
-                ///if (typeof w == "object") {
-                ///    parts.shift(); // In this case, operator is expected come be isolated.
-                ///    w = subQuery(w);
-                ///    var op = pickOperator(w); // Pick operator.
-                ///} else {
-                ///    var op = pickOperator(parts[0]); // Pick operator.
-                ///};
-
-                var op = w.match(/[^.\w()].*$/);
-                if (op) {
-                    op=op[0]; // Pick.
-                    w=w.substring(0,w.length-op.length); // Remove.
-                    if (op.match(/=\w/)) op = " "+op.substring(1)+" "; // =like, =ilike...
-                } else {
-                    op="="; // Default to equality.
-                };
-
-
-                // Pick argument name:
-                var argName = parts[1];
-                if (! argName) {
-                    argName = w.replace(/^(?:.*\.)?(.*)$/, "$1")
-                } else {
-                    w = w.replace(/ .*$/, ""); // Remove alias spec.
-                };
-
-                if (! argName.match(/\$/)) argName = "$"+argName; // Backward compatibility.
-
-                return pushCondition(w, op, argName, prm, fmt);
 
             })
             .filter(Filters.notEmpty) // Remove undefined arguments.
@@ -255,4 +261,3 @@ module.exports = {
 // var query = module.exports;
 //
 // (your testing code here)
-

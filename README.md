@@ -37,7 +37,8 @@ Almost "complete" example:
             "invoice.num",                        // Will look for 'num' argument.
             "empl.name",                          // Will look for 'name' argument.
             "client.name clientName",             // Will look for 'clientName' argument.
-            ["client.surname", "clientSurname"],  // Array can be used instead.
+            ["client.surname = $clientSurname"],  // Array can be used instead.
+            /// ["client.surname", "clientSurname"], /// ERROR!!: No more acceptable!!!
             ["client.sex",
                 function(s){                      // If function is provided as last property,
                     return s[0].toLowerCase();    // then it will be called to format

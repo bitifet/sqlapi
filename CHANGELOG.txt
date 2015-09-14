@@ -1,6 +1,9 @@
 CHANGELOG.txt
 =============
 
+
+    Refactorized where clausule parsing WARNING: aliases without '$' now are only valid in shorthand syntax.
+
 "version": "0.0.8" - Expressions and multiple parameter expressions.
     Allow expressions in querys, even with multiple arguments, by simply preceding each with '$' sign.
 
