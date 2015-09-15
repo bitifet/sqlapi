@@ -222,7 +222,7 @@ function queryFactory (//{{{
             return new Promise(function(resolve, reject){
                 Promise.all(querySpec.map(function(qspc, i){
                     if (typeof qspc == "function") return qspc.apply(me, args); // Allow to provide alternative implementation.
-                    return promiseQueryFn.apply(this,sqlBuilder(qspc, flt[i]));
+                    return Promise.resolve(promiseQueryFn.apply(this,sqlBuilder(qspc, flt[i])));
                 })).then(function(data){
                     resolve(
                         onFinalFullfill(

@@ -10,11 +10,54 @@ This is a simple tool to build simple parametyzed SQL querys without bothering a
 
 In fact, in almost all cases it only joins strings for you and prepend keyowrds as needed. For instance, if none of specified input parameters given, "where" clausule is not rendered. So syntax is ALWAYS consistent and no undesired "colName = ''" effect is caused by undefined input.
 
-Complex querys or any kind of type validation are not supported. Maybe in future versions...
+This is not an ORM. It doesn't know about actual DBMS and does not any kind of SQL syntax validation. It's your concern to build SQL compliant with your DBMS SQL syntax.
+
+It is only intended to be a simple tool to dynamically construct actual SQL querys depending on which input parameters are given or not.
+
+It is even not intended to support complex querys or any kind of data type validation. But, anyway, from version 0.0.9, subquerys are allowed too and works pretty fine at least in the tests I did.
+
+
+<a name="Brief"></a>Methods
+---------------------------
+
+### build
+
+Gets query specification (see [examples](#buildExamples)) and object of named parameters (typically some API request data) and returns sql string with positional parameters interpolated and the corresponding arguments array to feed usual database query functions.
+
+The main benefit is that query specification blocks having parameters which doesn't appears in (input) parameters object will not be rendered in the resulting sql query and it's values won't also appear in outputted arguments array.
+
+
+#### Syntax:
+
+    build (
+        querySpec               // Query specification object (see [examples](#buildExamples)).
+        , parameters            // (Named) parameters object.
+    )
+
+
+### factory
+
+Factory is simply a handy function that gets a database-querying function and returns a promisory function.
+
+That is: A function that gets a query specification object and automatically feeds it to build() method and uses it's result to call your provided database-querying function. See [examples](#factoryExamples) for more details.
+
+
+#### Syntax:
+
+    factory (
+        QueryFn                 // function(sql, arguments) // Returning result or promise.
+        , def_onFinalFullfill   // (Optional) Default final Fullfill parser.
+        , def_onFinalReject     // (Optional) Default final Reject parser.
+        , def_onStepFullfill    // (Optional) Default per-step Fullfill parser.
+        , def_onStepReject      // (Optional) Default per-step Reject parser.
+    ) 
 
 
 <a name="Examples"></a>Examples
 -------------------------------
+
+
+### <a name="buildExamples"></a>build() examples
 
 Almost "complete" example:
 
@@ -37,12 +80,30 @@ Almost "complete" example:
             "invoice.num",                        // Will look for 'num' argument.
             "empl.name",                          // Will look for 'name' argument.
             "client.name clientName",             // Will look for 'clientName' argument.
-            ["client.surname = $clientSurname"],  // Array can be used instead.
-            /// ["client.surname", "clientSurname"], /// ERROR!!: No more acceptable!!!
-            ["client.sex = $sex",
-                function(s){                      // If function is provided as last property,
-                    return s[0].toLowerCase();    // then it will be called to format
+            [                                     // Array can be used instead.
+                "client.surname",
+                "=",                              // ...but operators are no more guessed.
+                "$clientSurname"                  // ...and identifying parameter names prepended
+            ],                                    // by '$' sign is mandatory in this case.
+            [
+                "client.sex = $sex",              // Anyway, there is no need to separate it...
+                function(s){                      // ...but, if function is provided as last
+                    return s[0].toLowerCase();    // property, then it will be called to format
                 },                                // input when received .
+            ],
+            [                                     // Multiple parameter formatting:
+                "client.fullname ilike",
+                "$clientSurname",
+                "|| '_ ' || " // Standing for using "," or not",
+                "$clientName",
+                function(value, colName) {
+                    switch (colName) {
+                        case "clientSurname":
+                            return value.replace(/\s.*/, " "); // Get only firt.
+                        default:
+                            return value;
+                    };
+                },
             ],
         ],
         orderBy: [
@@ -122,8 +183,8 @@ And even more simplicity for trivial querys...
 ```
 
 
+### <a name="factoryExamples"></a>factory() examples
 
-<a name="More"></a>More capabilities
 
     var promiseQueryFn = ...  // function(sql, arguments) //-> Returning promise.
         // Existing function or your own implementation.
