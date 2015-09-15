@@ -46,7 +46,7 @@ var sqlBuilder = (function(){
             var newArgs = [];
 
             w = w.replace(
-                /\$\w+\b/g
+                /\$[a-zA-Z]\w*\b/g
                 , pushArgs
             );
 
@@ -64,45 +64,10 @@ var sqlBuilder = (function(){
             return argSrc;
         };//}}}
 
-
-
-        ///function subQuery(subQry) {//{{{
-        ///    var as = subQry.as
-        ///        ? " as " + subQry.as
-        ///        : ""
-        ///    ;
-        ///    return buildQuery(subQry, prm, args)[0]+as;
-        ///};//}}}
-
-        if (typeof qry == "string") { // Manual operation for too simple querys:
-            // NOTE: In this mode, prm is expected to be single parameter, propperly ordered array or undefined.
-            prm = prm === undefined
-                ? []
-                : prm instanceof Array
-                    ? prm
-                    : [prm]
-            ;
-            return [qry, prm];
-        } else if (prm === undefined) {
-            prm = {};
-        };
-
-        var select = argParse(qry.select, "select", true);
-        var from = argParse(qry.from, "from", true);
-        var where = argParse(qry.where, "where", false);
-        var orderBy = argParse(qry.orderBy, "orderBy", false);
-
-        var sql = "select " + select.join(",")
-            + " from " + from
-                .join(" join ")
-                .replace(/ join (left |right )?outer /, " $1outer join ") // Allow "outer tableName".
-        ;
-
-
         function simpleWhere(w){//{{{
 
             var parts = w.split(" ", 3).filter(Filters.defined);
-            if (parts.length >= 3) return w; // Guess constant (Ex.: "someNumber >= 15").
+            if (parts.length >= 3) return [w]; // Guess constant (Ex.: "someNumber >= 15").
             w = parts[0];
 
             var op = w.match(/[^.\w()].*$/);
@@ -124,9 +89,42 @@ var sqlBuilder = (function(){
 
             if (! argName.match(/\$/)) argName = "$"+argName; // Backward compatibility.
 
-            return [w, op, argName].join(" ");
+            return [w, op, argName];
 
         };//}}}
+
+        function subQuery(subQry) {//{{{
+            if (typeof subQry != "object") return subQry;
+            var sql = "("+buildQuery(subQry, prm, args)[0]+")";
+            return subQry.as
+                ? sql+" as "+subQry.as
+                : sql
+            ;
+        };//}}}
+
+        if (typeof qry == "string") { // Manual operation for too simple querys:
+            // NOTE: In this mode, prm is expected to be single parameter, propperly ordered array or undefined.
+            prm = prm === undefined
+                ? []
+                : prm instanceof Array
+                    ? prm
+                    : [prm]
+            ;
+            return [qry, prm];
+        } else if (prm === undefined) {
+            prm = {};
+        };
+
+        var select = argParse(qry.select, "select", true).map(subQuery);
+        var from = argParse(qry.from, "from", true).map(subQuery);
+        var where = argParse(qry.where, "where", false);
+        var orderBy = argParse(qry.orderBy, "orderBy", false).map(subQuery);
+
+        var sql = "select " + select.join(",")
+            + " from " + from
+                .join(" join ")
+                .replace(/ join (left |right )?outer /, " $1outer join ") // Allow "outer tableName".
+        ;
 
 
 
@@ -135,17 +133,19 @@ var sqlBuilder = (function(){
 
                 var fmt = false;
 
-                if (typeof w === "string") w = [w];
+                if (typeof w == "string") w = simpleWhere(w);
 
-                return w
+                var cnd = w
                     .map(function(w){
 
                         switch (typeof w) {
                             case "function":
                                 fmt = w;
-                                return;
+                                return "";
                             case "string":
-                                return simpleWhere(w);
+                                return w;
+                            case "object":
+                                return subQuery(w);
                             default:
                                 throw "Wrong where clausule item: " + w;
 
@@ -153,11 +153,9 @@ var sqlBuilder = (function(){
 
                     })
                     .filter(Filters.defined)
-                    .map(function(w){
-                        return pushCondition(w, prm, fmt);
-                    })
                     .join (" ")
                 ;
+                return pushCondition(cnd, prm, fmt);
 
             })
             .filter(Filters.notEmpty) // Remove undefined arguments.
