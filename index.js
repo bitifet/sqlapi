@@ -17,7 +17,7 @@ var Parsers = {//{{{
     pickFirst: function pickFirst(v){return v[0];},
 };//}}}
 function guess (preffix, str) {//{{{
-    return str.length ? preffix + str : "";
+    return str.length ? preffix+" "+str : "";
 };//}}}
 
 // -----------------------------
@@ -27,7 +27,7 @@ var sqlBuilder = (function(){
 
     function buildQuery(qry, prm, args) {//{{{
 
-        function pushCondition(w, prm, fmt){//{{{
+        function pickArgs(str, prm, fmt){//{{{
             function pushArgs(argName){//{{{
                 argName = argName.substring(1); // Remove '$' sign.
                 if (prm[argName] === undefined) {
@@ -41,18 +41,19 @@ var sqlBuilder = (function(){
                 return "$"+(i++);
             };//}}}
 
+            if (typeof str != "string") return str;
             var i = args.length + 1;
             var missing = false;
             var newArgs = [];
 
-            w = w.replace(
+            str = str.replace(
                 /\$[a-zA-Z]\w*\b/g
                 , pushArgs
             );
 
             if (missing) return;
             args = args.concat(newArgs);
-            return w;
+            return str;
 
         };//}}}
 
@@ -102,6 +103,35 @@ var sqlBuilder = (function(){
             ;
         };//}}}
 
+        function subParser(label, shorthandfn) {//{{{
+
+            if (! shorthandfn) shorthandfn = function (v){return[v];};
+
+            return function getParts (src) {
+                if (typeof src == "string") src = shorthandfn(src);
+                var fmt = false;
+                var cnd = src
+                    .map(function(src){
+                        switch (typeof src) {
+                            case "function":
+                                fmt = src;
+                                return "";
+                            case "string":
+                                return src;
+                            case "object":
+                                return subQuery(src);
+                            default:
+                                throw "Wrong "+label+" clausule format: " + src;
+
+                        };
+                    })
+                    .filter(Filters.defined)
+                    .join (" ")
+                ;
+                return pickArgs(cnd, prm, fmt);
+            };
+        };//}}}
+
         if (qry instanceof Array) qry = qry.join("\n"); // Fancy string parts provided by array.
         if (typeof qry == "string") { // Manual operation for too simple querys:
             // NOTE: In this mode, prm is expected to be single parameter, propperly ordered array or undefined.
@@ -116,53 +146,32 @@ var sqlBuilder = (function(){
             prm = {};
         };
 
-        var select = argParse(qry.select, "select", true).map(subQuery);
-        var from = argParse(qry.from, "from", true).map(subQuery);
-        var where = argParse(qry.where, "where", false);
-        var orderBy = argParse(qry.orderBy, "orderBy", false).map(subQuery);
-
-        var sql = "select " + select.join(",")
-            + " from " + from
+        var sql = [
+            // Select:
+            guess("select", argParse(qry.select, "select", true)
+                .map(subParser("select"))
+                .filter(Filters.defined)
+                .join(",")
+            ),
+            // From:
+            guess("from" , argParse(qry.from, "from", true)
+                .map(subParser("from"))
+                .filter(Filters.defined)
                 .join(" join ")
                 .replace(/ join (left |right )?outer /, " $1outer join ") // Allow "outer tableName".
-        ;
-
-
-
-        if (where) sql += guess(" where ", where
-            .map(function(w){
-
-                var fmt = false;
-
-                if (typeof w == "string") w = simpleWhere(w);
-
-                var cnd = w
-                    .map(function(w){
-
-                        switch (typeof w) {
-                            case "function":
-                                fmt = w;
-                                return "";
-                            case "string":
-                                return w;
-                            case "object":
-                                return subQuery(w);
-                            default:
-                                throw "Wrong where clausule item: " + w;
-
-                        };
-
-                    })
-                    .filter(Filters.defined)
-                    .join (" ")
-                ;
-                return pushCondition(cnd, prm, fmt);
-
-            })
-            .filter(Filters.notEmpty) // Remove undefined arguments.
-            .join(" and ")
-        );
-        if (orderBy) sql += guess(" order by ", orderBy.join(","));
+            ),
+            // Where:
+            guess("where", argParse(qry.where, "where", false)
+                .map(subParser("where", simpleWhere))
+                .filter(Filters.notEmpty) // Remove undefined arguments.
+                .join(" and ")
+            ),
+            // Order by:
+            guess("order by", argParse(qry.orderBy, "orderBy", false)
+                .map(subParser("orderBy"))
+                .join(",")
+            ),
+        ].join(" ");
 
         return [sql, args];
         
