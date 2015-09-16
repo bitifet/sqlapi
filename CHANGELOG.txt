@@ -1,6 +1,7 @@
 CHANGELOG.txt
 =============
 
+    When passing direct sql string, allow to provide it as an array of strings to be joined with newlines.
 
 "version": "0.0.9" - Implemented subquerys and updated README file.
     Refactorized where clausule parsing WARNING: aliases without '$' now are only valid in shorthand syntax.

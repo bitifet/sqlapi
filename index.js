@@ -102,6 +102,7 @@ var sqlBuilder = (function(){
             ;
         };//}}}
 
+        if (qry instanceof Array) qry = qry.join("\n"); // Fancy string parts provided by array.
         if (typeof qry == "string") { // Manual operation for too simple querys:
             // NOTE: In this mode, prm is expected to be single parameter, propperly ordered array or undefined.
             prm = prm === undefined
