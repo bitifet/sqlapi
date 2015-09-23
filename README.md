@@ -183,6 +183,39 @@ And even more simplicity for trivial querys...
 ```
 
 
+Also, from version 0.0.10, the rest of query parts are also parametisable...
+
+```javascript
+    var query = require("sqlapi");
+
+    var sql = {
+        select: [
+            '$foo',
+            '$bar as bar',
+            'baz',
+            'foobar',
+        ],
+        from: [
+            "table1 as t1",
+            "table2 as t2  on (t1.x = $baz and t2.y = t1.y)", // Nor here...
+        ],
+    };
+
+    var args = { // Try commenting-out any combination of this and see the magic:
+        foo: "fooValue",
+        bar: "barValue",
+        baz: "bazValue",
+    };
+
+    var q = query.build(sql, args);
+
+    console.log(
+        q[0], // Query string.
+        q[1]  // Arguments parameter.
+    );
+```
+
+
 ### <a name="factoryExamples"></a>factory() examples
 
 

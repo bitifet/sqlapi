@@ -1,6 +1,7 @@
 CHANGELOG.txt
 =============
 
+"version": "0.0.10"
     When passing direct sql string, allow to provide it as an array of strings to be joined with newlines.
     Generalyzed arguments interpolation. Now all query parts are parametisable.
 
