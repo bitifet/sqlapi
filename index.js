@@ -132,8 +132,11 @@ var sqlBuilder = (function(){
             };
         };//}}}
 
-        if (qry instanceof Array) qry = qry.join("\n"); // Fancy string parts provided by array.
-        if (typeof qry == "string") { // Manual operation for too simple querys:
+        if (qry instanceof Array) { // Fancy string parts provided by array://{{{
+            qry = qry.join("\n");
+        };//}}}
+
+        if (typeof qry == "string") { // Manual operation for too simple querys://{{{
             // NOTE: In this mode, prm is expected to be single parameter, propperly ordered array or undefined.
             prm = prm === undefined
                 ? []
@@ -144,7 +147,25 @@ var sqlBuilder = (function(){
             return [qry, prm];
         } else if (prm === undefined) {
             prm = {};
-        };
+        };//}}}
+
+        if (typeof qry._bypass == "function") { // _bypass functionality://{{{
+            var bypass = qry._bypass(prm);
+            if ((typeof bypass === "object") && ! (bypass instanceof Array)) {
+                prm = bypass;
+            } else if (bypass) { // false/undefined => no bypass.
+                if (bypass === true) { // Return query with no results.
+                    bypass = "select 0 where false";
+                    prm = [];
+                } else if (typeof bypass == "string") {
+                    prm = [];
+                } else if (bypass instanceof Array) {
+                    if (bypass[1] !== undefined) prm = bypass[1]; // Preserve parameters when not overridden.
+                    bypass = bypass[0]; // Whole distinct query spec.
+                };
+                return buildQuery(bypass, prm); // Apply bypass.
+            };
+        };//}}}
 
         var sql = [
             // Select:

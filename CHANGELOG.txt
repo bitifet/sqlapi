@@ -1,6 +1,9 @@
 CHANGELOG.txt
 =============
 
+"version": "0.0.11" - Implemented bypass capability (thougth _bypass callback).
+    Useful when you want to fully avoid expensive query execution or perform some arguments handling in a given conditions.
+
 "version": "0.0.10"
     When passing direct sql string, allow to provide it as an array of strings to be joined with newlines.
     Generalyzed arguments interpolation. Now all query parts are parametisable.

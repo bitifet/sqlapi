@@ -111,6 +111,24 @@ Almost "complete" example:
             "client",
             "total desc",
         ],
+        _bypass: function(prm){ // Optional bypass callback.
+            // Possible return values:
+            //  * Falsy (false, null, undefined...):
+            //      - Does nothing (normal operation).
+            //  * String: 
+            //      - Replaces sql specification and sets arguments to [].
+            //  * Object:
+            //      - Replaces arguments with that object.
+            //  * Array: 
+            //      - Replaces both sql specification and arguments with its first two elements.
+            //      - Respect orginal arguments if ommitted (arr[1] == undefined).
+            // * (boolean) true:
+            //      - Replaces sql and arguments with a nonsense query and arguments:
+            //          ("select 0 where false" and [])
+            //      - This is useful when you want to fully avoid expensive
+            //        query execution depending on given conditions over provided
+            //        arguments.
+        },
     };
 
     var args = { // Try commenting-out any combination of this and see the magic:
