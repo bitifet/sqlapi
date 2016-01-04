@@ -112,7 +112,8 @@ Almost "complete" example:
             "total desc",
         ],
         _bypass: function(prm){ // Optional bypass callback.
-            // Possible return values:
+            return false; // (Does nothing)
+            // All possible return values are:
             //  * Falsy (false, null, undefined...):
             //      - Does nothing (normal operation).
             //  * String: 
