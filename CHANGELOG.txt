@@ -1,6 +1,9 @@
 CHANGELOG.txt
 =============
 
+"version": "0.0.12" - Bugfix: Multiple outer joins didn't work before.
+    Because of the lack of 'g' modifier in regular expression no more than one right/left outer join were possible before.
+
 "version": "0.0.11" - Implemented bypass capability (thougth _bypass callback).
     Useful when you want to fully avoid expensive query execution or perform some arguments handling in a given conditions.
 

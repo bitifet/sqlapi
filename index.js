@@ -179,7 +179,7 @@ var sqlBuilder = (function(){
                 .map(subParser("from"))
                 .filter(Filters.defined)
                 .join(" join ")
-                .replace(/ join (left |right )?outer /, " $1outer join ") // Allow "outer tableName".
+                .replace(/ join (left |right )?outer /g, " $1outer join ") // Allow "outer tableName".
             ),
             // Where:
             guess("where", argParse(qry.where, "where", false)

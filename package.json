@@ -1,6 +1,6 @@
 {
   "name": "sqlapi",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "Simple API to build customised SQL according given input parameters.",
   "main": "index.js",
   "scripts": {
