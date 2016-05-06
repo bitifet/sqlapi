@@ -34,15 +34,30 @@ var sqlBuilder = (function(){
                     missing = true;
                     return "";
                 };
+                if (! (argIndex[argName] instanceof Array)) argIndex[argName] = [];
+                for (
+                    var i = 0;
+                    i < argIndex[argName].length;
+                    i++
+                ) if (
+                    fCompare(fmt, argIndex[argName][i].fmt)
+                ) {
+                    return argIndex[argName][i].$$;
+                };
+                var $$ = "$"+(++argsCount);
                 newArgs[newArgs.length] = fmt
                     ? fmt(prm[argName], argName) // Apply formatting callback if specified.
                     : prm[argName]
                 ;
-                return "$"+(i++);
+                argIndex[argName].push({
+                    "$$": $$,
+                    fmt: fmt,
+                });
+                return $$
             };//}}}
 
             if (typeof str != "string") return str;
-            var i = args.length + 1;
+            var argsCount = args.length;
             var missing = false;
             var newArgs = [];
 
@@ -166,6 +181,18 @@ var sqlBuilder = (function(){
                 return buildQuery(bypass, prm); // Apply bypass.
             };
         };//}}}
+
+        var argIndex = {};
+        var fCompare = qry._strictFunctionComparsion
+            ? function strictFunctionComparsion(f1, f2){return f1 === f2;}
+            : function laxFunctionComparsion(f1, f2){
+                console.log (f1, f2, f1 === f2);
+                return typeof f1 == "function"
+                    ? f1.toString() == f2.toString()
+                    : f1 === f2
+                ;
+            }
+        ;
 
         var sql = [
             // Select:

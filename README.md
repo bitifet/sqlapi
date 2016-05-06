@@ -96,9 +96,9 @@ Almost "complete" example:
                 "$clientSurname",
                 "|| '_ ' || " // Standing for using "," or not",
                 "$clientName",
-                function(value, colName) {
-                    switch (colName) {
-                        case "clientSurname":
+                function(value, colName) {        // Formatting functions also recieve column name.
+                    switch (colName) {            //    ...so you can implement generic ones with special
+                        case "clientSurname":     //    behaviour for specific column name.
                             return value.replace(/\s.*/, " "); // Get only firt.
                         default:
                             return value;
@@ -130,6 +130,24 @@ Almost "complete" example:
             //        query execution depending on given conditions over provided
             //        arguments.
         },
+        _strictFunctionComparsion: false, // (Default. You usually doesn't need to specify it)
+            // When a parameter name apperars more than one time in the query specification
+            // sqlAPI tries to don't waste argument placeholders ($1, $2,...) for each
+            // repetition because, if multiple placeholders are used for the same value,
+            // database planner could'nt recognize them as "always the same value" and
+            // many performance optimizations could not to be applyed.
+            // But if some of those parameter names provides a formatting function, those
+            // functions needs to be compared to ensure the actual value (and expected database
+            // type) matches.
+            // In that case, formatting functions should match. But if you are'nt too polite to
+            // not define it twice, you could end up with two different functions doing exactly
+            // the same and two or more positional parameters will be pointless generated..
+            // For this reason sqlAPI, by default, only compares a trimmed string representation
+            // of the function. Most of times making your life easier.
+            // But, in Javascript, two functions with the exact same implementation, can have
+            // different behaviours if they are defined in different scopes.
+            // In such situation, you will need to set this parameter to true to ensure only
+            // references to the same exact function are matched.
     };
 
     var args = { // Try commenting-out any combination of this and see the magic:
