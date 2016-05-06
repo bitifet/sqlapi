@@ -186,9 +186,8 @@ var sqlBuilder = (function(){
         var fCompare = qry._strictFunctionComparsion
             ? function strictFunctionComparsion(f1, f2){return f1 === f2;}
             : function laxFunctionComparsion(f1, f2){
-                console.log (f1, f2, f1 === f2);
                 return typeof f1 == "function"
-                    ? f1.toString() == f2.toString()
+                    ? f1.toString().replace(/\s/g, '') == f2.toString().replace(/\s/g, '')
                     : f1 === f2
                 ;
             }

@@ -1,7 +1,9 @@
 CHANGELOG.txt
 =============
 
-"version": "0.0.13", - Implemented smart argument name repetion detection.
+"version": "0.0.14" - FIX: Removed forgiven debugging code.
+
+"version": "0.0.13" - Implemented smart argument name repetion detection.
     Avoids to waste placeholders in resulting argument list and, hence, poor plan opitimizations at database level.
 
 "version": "0.0.12" - Bugfix: Multiple outer joins didn't work before.
